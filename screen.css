@@ -1,0 +1,35 @@
+#actions, #initial, #distilled {
+  width: 50%;
+}
+#initial, #distilled {
+  float: left;
+}
+#actions {
+  float: right;
+  text-align: center;
+}
+#distilled p {
+  padding-left: 10px;
+  word-break: break-all;
+}
+#distilled p.initial {
+  color: grey;
+  cursor: pointer;
+}
+#initial p {
+  padding-right: 10px;
+}
+p {
+  min-height: 20px;
+}
+.clearfix {
+  *zoom: 1;
+}
+.clearfix:before, .clearfix:after {
+  display: table;
+  content: "";
+  line-height: 0;
+}
+.clearfix:after {
+  clear: both;
+}
