@@ -14,6 +14,7 @@ newInitialParagraph = (text) ->
   paragraph_counter += 1
 
   newDistilledParagraph($initial)
+  resizeInitial($initial)
 
   $initial
 
@@ -97,7 +98,6 @@ initialModified = (evt, hallo_evt) ->
     $p = newInitialParagraph(after)
     $this.after($p)
     $p.focus()
-    newDistilledParagraph($p)
 
   $this.data('distilled-initial').html($this.html())
   resizeInitial($this)
@@ -111,15 +111,29 @@ imSatisfied = ->
   $containers.each(->
     $this = $(this)
     $replacements = $this.children('.replacement')
-    if $replacements.length == 0
-      $initial = newInitialParagraph($this.children('.initial').html())
-      $initial_editor.append($initial)
+
+    replacements = []
+    # Empty replacements are considered nonexistent
+    $replacements.each(->
+      text = $(this).html()
+      if text
+        replacements.push(text)
+    )
+
+    if replacements.length == 0
+      initial_text = $this.children('.initial').html()
+      if initial_text
+        $initial = newInitialParagraph(initial_text)
+        $initial_editor.append($initial)
     else
-      $replacements.each(->
-        $initial = newInitialParagraph($(this).html())
+      $.each(replacements, ->
+        $initial = newInitialParagraph(this)
         $initial_editor.append($initial)
       )
   )
+
+  if $initial_editor.children().length == 0
+    newInitialParagraph().appendTo($initial_editor)
 
 
 # Resize the initial paragraph to match height of distilled

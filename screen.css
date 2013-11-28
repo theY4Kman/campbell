@@ -1,3 +1,6 @@
+p {
+  font-family: sans-serif;
+}
 #actions, #initial, #distilled {
   width: 50%;
 }
@@ -9,18 +12,19 @@
   text-align: center;
 }
 #distilled p {
-  padding-left: 10px;
   word-break: break-all;
 }
 #distilled p.initial {
   color: grey;
   cursor: pointer;
 }
-#initial p {
-  padding-right: 10px;
+#initial p, #distilled div {
+  border-bottom: 1px solid gray;
 }
 p {
   min-height: 20px;
+  padding: 0 10px;
+  width: 95%;
 }
 .clearfix {
   *zoom: 1;

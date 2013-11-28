@@ -19,6 +19,7 @@
     $initial.attr('id', initial_id_prefix + paragraph_counter);
     paragraph_counter += 1;
     newDistilledParagraph($initial);
+    resizeInitial($initial);
     return $initial;
   };
 
@@ -92,7 +93,6 @@
       $p = newInitialParagraph(after);
       $this.after($p);
       $p.focus();
-      newDistilledParagraph($p);
     }
     $this.data('distilled-initial').html($this.html());
     return resizeInitial($this);
@@ -103,20 +103,34 @@
     $initial_editor.empty();
     $containers = $distilled_editor.children();
     $containers.remove();
-    return $containers.each(function() {
-      var $initial, $replacements, $this;
+    $containers.each(function() {
+      var $initial, $replacements, $this, initial_text, replacements;
       $this = $(this);
       $replacements = $this.children('.replacement');
-      if ($replacements.length === 0) {
-        $initial = newInitialParagraph($this.children('.initial').html());
-        return $initial_editor.append($initial);
+      replacements = [];
+      $replacements.each(function() {
+        var text;
+        text = $(this).html();
+        if (text) {
+          return replacements.push(text);
+        }
+      });
+      if (replacements.length === 0) {
+        initial_text = $this.children('.initial').html();
+        if (initial_text) {
+          $initial = newInitialParagraph(initial_text);
+          return $initial_editor.append($initial);
+        }
       } else {
-        return $replacements.each(function() {
-          $initial = newInitialParagraph($(this).html());
+        return $.each(replacements, function() {
+          $initial = newInitialParagraph(this);
           return $initial_editor.append($initial);
         });
       }
     });
+    if ($initial_editor.children().length === 0) {
+      return newInitialParagraph().appendTo($initial_editor);
+    }
   };
 
   resizeInitial = function($initial) {

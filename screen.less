@@ -1,3 +1,7 @@
+p {
+    font-family: sans-serif;
+}
+
 #actions,
 #initial,
 #distilled {
@@ -16,7 +20,6 @@
 
 #distilled {
     p {
-        padding-left: 10px;
         word-break: break-all;
 
         &.initial {
@@ -28,12 +31,18 @@
 
 #initial {
     p {
-        padding-right: 10px;
     }
+}
+
+#initial p,
+#distilled div {
+    border-bottom: 1px solid gray;
 }
 
 p {
     min-height: 20px;
+    padding: 0 10px;
+    width: 95%;
 }
 
 
