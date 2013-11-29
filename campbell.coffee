@@ -4,6 +4,18 @@ initial_id_prefix = 'initial'
 $distilled_editor = null
 $initial_editor = null
 
+# Saves state at each moment of satisfaction
+timeline = [null]
+
+
+recordCurrentState = ->
+  timeline[timeline.length - 1] = [Date.now(), reprState()]
+
+
+changeOccurred = ->
+  recordCurrentState()
+  localStorage.timeline = timeline
+
 
 newInitialParagraph = (text) ->
   $initial = $('<p>')
@@ -32,9 +44,6 @@ newDistilledParagraph = ($initial) ->
   $initial.data('distilled-initial', $distilled)
 
   $distilled.on('click', ->
-    # If there is a replacement paragraph already, focus it
-    # If not, create one and add it
-    #   and set its data('initial')
     $this = $(this)
     $next = $this.next()
     $replacement = if $next.is('.replacement') then $next
@@ -68,6 +77,7 @@ replacementModified = (evt, hallo_evt) ->
 
   # This is checking for a newline, which might not be cross-browser compatible
   # FIXME This should probably be done in a keypress or similar event.
+  # XXX This could be a hallo-controlled thing, and there may be nothing to worry about.
   newline_html_content = '<div>'
   newline_idx = hallo_evt.content.indexOf(newline_html_content)
   if newline_idx >= 0
@@ -81,6 +91,7 @@ replacementModified = (evt, hallo_evt) ->
     $p.focus()
 
   resizeInitial($this.data('distilled').data('initial'))
+  changeOccurred()
 
 
 initialModified = (evt, hallo_evt) ->
@@ -101,6 +112,7 @@ initialModified = (evt, hallo_evt) ->
 
   $this.data('distilled-initial').html($this.html())
   resizeInitial($this)
+  changeOccurred()
 
 
 imSatisfied = ->
@@ -142,11 +154,39 @@ resizeInitial = ($initial) ->
   $initial.height($distilled_container.height())
 
 
+reprState = ->
+  # All that's needed to reproduce state at one point is the distilled side's
+  # initial text, its replacements (if they exist), and the ordering of the
+  # paragraphs (done with a list).
+  # TODO When removal of paragraphs is added, an is_removed flag will have to
+  #      be added
+
+  paragraphs = []
+  $distilled_editor.children().each(->
+    $this = $(this)
+    initial = $this.data('distilled-initial').text()
+
+    replacements = []
+    $this.find('.replacement').each(->
+      replacements.push($(this).text())
+    )
+
+    paragraphs.push([initial, replacements])
+  )
+
+  paragraphs
+
+
 $ ->
   $distilled_editor = $('#distilled')
   $initial_editor = $('#initial')
 
   newInitialParagraph().appendTo($initial_editor)
+
+  # Replace the placeholder null with an actual state repr. Not necessary, but
+  # ensures timeline contains only valid state reprs when the application is
+  # active, so potential future features can assume this is so.
+  timeline = [reprState()]
 
   $('#satisfied').click(imSatisfied)
 
