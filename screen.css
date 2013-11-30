@@ -1,15 +1,23 @@
 p {
   font-family: sans-serif;
 }
-#actions, #initial, #distilled {
+#actions,
+#initial,
+#distilled,
+#notebook-shit {
   width: 50%;
 }
 #initial, #distilled {
   float: left;
 }
+#notebook-shit, #actions {
+  text-align: center;
+}
+#notebook-shit {
+  float: left;
+}
 #actions {
   float: right;
-  text-align: center;
 }
 #distilled p {
   word-break: break-all;

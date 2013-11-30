@@ -1,3 +1,5 @@
+NEWLINE_ORD = '\n'.charCodeAt(0)
+
 paragraph_counter = 0
 initial_id_prefix = 'initial'
 
@@ -6,15 +8,6 @@ $initial_editor = null
 
 # Saves state at each moment of satisfaction
 timeline = [null]
-
-
-recordCurrentState = ->
-  timeline[timeline.length - 1] = [Date.now(), reprState()]
-
-
-changeOccurred = ->
-  recordCurrentState()
-  localStorage.timeline = timeline
 
 
 newInitialParagraph = (text) ->
@@ -62,12 +55,14 @@ newDistilledParagraph = ($initial) ->
     $distilled_editor.append($container)
 
 
-newReplacementParagraph = ($distilled) ->
+newReplacementParagraph = ($distilled, text) ->
   $replacement = $('<p>')
   $replacement.addClass('replacement')
   $replacement.hallo()
   $replacement.data('distilled', $distilled)
   $replacement.on('hallomodified', replacementModified)
+
+  if text? then $replacement.html(text)
 
   $replacement
 
@@ -148,6 +143,8 @@ imSatisfied = ->
     newInitialParagraph().appendTo($initial_editor)
 
 
+
+
 # Resize the initial paragraph to match height of distilled
 resizeInitial = ($initial) ->
   $distilled_container = $initial.data('distilled')
@@ -155,16 +152,13 @@ resizeInitial = ($initial) ->
 
 
 reprState = ->
-  # All that's needed to reproduce state at one point is the distilled side's
-  # initial text, its replacements (if they exist), and the ordering of the
-  # paragraphs (done with a list).
   # TODO When removal of paragraphs is added, an is_removed flag will have to
   #      be added
 
   paragraphs = []
   $distilled_editor.children().each(->
     $this = $(this)
-    initial = $this.data('distilled-initial').text()
+    initial = $this.data('initial').text()
 
     replacements = []
     $this.find('.replacement').each(->
@@ -177,16 +171,68 @@ reprState = ->
   paragraphs
 
 
-$ ->
+getTimelineFrame = ->
+  [Date.now(), reprState()]
+
+
+recordCurrentState = ->
+  timeline[timeline.length - 1] = getTimelineFrame()
+
+
+appendCurrentState = ->
+  timeline.push(getTimelineFrame())
+
+
+storeState = ->
+  localStorage.timeline = JSON.stringify(timeline)
+
+
+loadStateFromStore = ->
+  if localStorage.timeline?
+    timeline = JSON.parse(localStorage.timeline)
+    [_, state] = timeline[timeline.length - 1]
+    loadState(state)
+    return true
+  else
+    return false
+
+
+changeOccurred = ->
+  recordCurrentState()
+  storeState()
+
+
+loadState = (state) ->
+  $.each(state, ->
+    [initial, replacements] = this
+
+    $initial = newInitialParagraph(initial)
+    $initial.appendTo($initial_editor)
+
+    $distilled = $initial.data('distilled')
+    $.each(replacements, ->
+      newReplacementParagraph($distilled, this)
+    )
+  )
+
+
+handleShortcuts = (evt) ->
+  if evt.keyCode == NEWLINE_ORD and evt.ctrlKey
+    imSatisfied()
+
+
+initialize = ->
   $distilled_editor = $('#distilled')
   $initial_editor = $('#initial')
 
-  newInitialParagraph().appendTo($initial_editor)
-
-  # Replace the placeholder null with an actual state repr. Not necessary, but
-  # ensures timeline contains only valid state reprs when the application is
-  # active, so potential future features can assume this is so.
-  timeline = [reprState()]
+  if not loadStateFromStore()
+    newInitialParagraph().appendTo($initial_editor)
 
   $('#satisfied').click(imSatisfied)
+
+  $('body').on('keypress', handleShortcuts)
+
+
+$ ->
+  initialize()
 
