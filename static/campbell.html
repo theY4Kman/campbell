@@ -1,0 +1,40 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="css/screen.css" />
+        <title>Campbell Editor</title>
+    </head>
+    <body ng-app="campbell" ng-controller="CampbellCtrl">
+        <div id="top-bar">
+            <div id="notebook-shit">
+                <input id="notebook-name" type="text" ng-model="notebook.name" />
+                <select ng-model="notebook" ng-options="notebook as notebook.name for notebook in notebooks"></select>
+            </div>
+            <div id="actions">
+                <button type="button" id="satisfied">I'm Satisfied</button>
+            </div>
+        </div>
+        <div class="clearfix"></div>
+        <div id="editors">
+            <div id="initial" ng-controller="InitialCtrl">
+                <p hallo ng-repeat="block in blocks" hallo-text="block.initial" hallo-id="block.id" id="initial{{ block.id }}"></p>
+            </div>
+            <div id="distilled" ng-controller="DistilledCtrl">
+                <div distilled-block ng-repeat="block in blocks" class="block">
+                    <p distilled-initial class="initial" ng-model="block.initial"></p>
+                    <div class="replacements" ng-controller="ReplacementsCtrl">
+                        <p class="replacement" hallo ng-repeat="replacement in block.replacements" hallo-text="replacement.text" hallo-id="replacement.id"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.3/angular.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.min.js"></script>
+        <script src="http://rangy.googlecode.com/svn/trunk/currentrelease/rangy-core.js"></script>
+        <script src="js/hallo.js"></script>
+        <script src="js/angular-local-storage.min.js"></script>
+        <script src="js/string.js"></script>
+        <script src="js/campbell.js"></script>
+    </body>
+</html>
