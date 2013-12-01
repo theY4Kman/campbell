@@ -1,9 +1,13 @@
 app = angular.module('campbell', ['LocalStorageModule'])
 
 
-app.directive('hallo', ->
+app.directive('hallo', ($timeout) ->
   return {
     link: (scope, element, attrs) ->
+      # Ensure the main campbell app can keep an ID=>element mapping
+      scope.$emit('register-element', element, scope.$eval(attrs.halloId))
+
+
       $element = $(element)
 
       initial_html = scope.$eval(attrs.halloText)
@@ -16,6 +20,7 @@ app.directive('hallo', ->
         $element.html(scope.$eval(attrs.halloText))
       )
 
+      # THIS IS A jQuery EVENT, NOT AN ANGULAR EVENT
       $element.on('hallomodified', ->
         content = element.html()
 
@@ -30,14 +35,30 @@ app.directive('hallo', ->
           after = element.find('div').text() + after_div_text
 
           element.html(before)
-          scope.$emit('hallosplit', element, scope.$eval(attrs.halloId), after)
+          scope.$emit('hallo-split', element, scope.$eval(attrs.halloId), after)
 
-        scope.$emit('hallomodified', element)
+        scope.$emit('hallo-modified', element)
 
         escaped = content.replace('"', '\\"')
         scope.$eval(attrs.halloText + ' = "' + escaped + '"')
         scope.$apply()
       )
+
+
+      scope.selectAll = ->
+        $timeout(->
+          replacement = element[0]
+          if window.getSelection and document.createRange
+            range = document.createRange()
+            range.selectNodeContents(replacement)
+            sel = window.getSelection()
+            sel.removeAllRanges()
+            sel.addRange(range)
+          else if document.body.createTextRange
+            range = document.body.createTextRange()
+            range.moveToElementText(replacement)
+            range.select()
+        1);
 
       # Focus new hallos
       $element.focus()
@@ -46,26 +67,26 @@ app.directive('hallo', ->
 
 
 app.directive('distilledInitial', ->
-  return {
+  {
     link: (scope, element, attrs) ->
       scope.$watch(attrs.ngModel, ->
         element.html(scope.$eval(attrs.ngModel))
       )
 
       element.on('click', ->
-        scope.$emit('distilledinitialclick')
+        scope.$emit('distilled-initial-click')
       )
   }
 )
 
 
 app.directive('distilledBlock', ($rootScope) ->
-  return {
+  {
     link: (scope, element, attrs) ->
       scope.height = -> $(element).height()
 
-      scope.$on('hallomodified', (evt, element) ->
-        $rootScope.$broadcast('distilledmodified', scope)
+      scope.$on('hallo-modified', (evt, element) ->
+        $rootScope.$broadcast('distilled-modified', scope)
       )
 
       # Drawing attention to 3rd parameter: because block.replacements is an
@@ -73,42 +94,58 @@ app.directive('distilledBlock', ($rootScope) ->
       # angular.equals (which does deep testing) always returns true, unless a
       # new array is created.
       scope.$watch('block.replacements', ->
-        $rootScope.$broadcast('distilledmodified', scope)
+        $rootScope.$broadcast('distilled-modified', scope)
       true)
 
-      scope.$on('distilledinitialclick', ->
+      scope.$on('distilled-initial-click', ->
         $replacements = $(element).find('.replacements > p')
         if $replacements.length
-          $replacements.first().focus()
+          $selected = $replacements.first()
+          $selected.focus()
+          # XXX: is this more useful than putting focus at end of block? I
+          #      would want to impose using the Satisfaction button, but it may
+          #      actually be more convenient to be able to easily remove all
+          #      text of an item, thereby allowing the user to attempt (and
+          #      possibly succeed) at offering a better idea by niggling in the
+          #      distillation editor, while still allowing distinct
+          #      distillation by Satisfaction for other users. Totes keeping
+          #      it.
+          # FIXME: move discussion to a GH issue and replace with link next ci
+          angular.element($selected).scope().selectAll()
         else
-          replacement = scope.newReplacement()
+          replacement = scope.newReplacement(scope.block.text)
           scope.insertReplacementAfter(replacement, scope.block)
           scope.$apply()
+
+          repl_element = scope.getElementById(replacement.id)
+          repl_element.scope().selectAll()
       )
 
 
-      $rootScope.$broadcast('distilledcreated', scope)
+      $rootScope.$broadcast('distilled-created', scope)
   }
 )
 
 
 app.controller('CampbellCtrl', ($scope) ->
   $scope.blocks = []
+  $scope.nodes_by_id = {}
 
   paragraph_counter = 0
   $scope.nextId = -> paragraph_counter++
 
 
   $scope.newReplacement = (text='') -> {id: $scope.nextId(), text: text}
-  $scope.newBlock = (initial='', replacements=[]) ->
+  $scope.newBlock = (text='', replacements=[]) ->
     {
       id: $scope.nextId(),
-      initial: initial,
+      text: text,
       replacements: $scope.newReplacement(text) for text in replacements
     }
 
 
   $scope.insertBlockAfter = (block, id) ->
+    $scope.nodes_by_id[block.id] = block
     if id?
       for cur_block, i in $scope.blocks
         if cur_block.id == id
@@ -128,6 +165,15 @@ app.controller('CampbellCtrl', ($scope) ->
       block.replacements.push(replacement)
 
 
+  $scope.getElementById = (id) ->
+    $scope.nodes_by_id[id]
+
+
+  $scope.$on('register-element', (evt, element, id) ->
+    $scope.nodes_by_id[id] = element
+  )
+
+
   # Create initial block
   $scope.insertBlockAfter($scope.newBlock('Edit me', ['Edit me, too']))
 )
@@ -138,7 +184,7 @@ app.controller('InitialCtrl', ($scope, $timeout) ->
     document.querySelector('#initial' + id)
 
 
-  $scope.$on('hallosplit', (evt, element, id, text) ->
+  $scope.$on('hallo-split', (evt, element, id, text) ->
     block = $scope.newBlock(text)
     $scope.insertBlockAfter(block, id)
   )
@@ -150,13 +196,13 @@ app.controller('InitialCtrl', ($scope, $timeout) ->
       $paragraph.height(distilled.height())
     )
 
-  $scope.$on('distilledmodified', matchDistilledHeight)
-  $scope.$on('distilledcreated', matchDistilledHeight)
+  $scope.$on('distilled-modified', matchDistilledHeight)
+  $scope.$on('distilled-created', matchDistilledHeight)
 )
 
 
 app.controller('ReplacementsCtrl', ($scope) ->
-  $scope.$on('hallosplit', (evt, element, id, text) ->
+  $scope.$on('hallo-split', (evt, element, id, text) ->
     replacement = $scope.newReplacement(text)
     $scope.insertReplacementAfter(replacement, $scope.block, id)
   )

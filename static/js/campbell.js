@@ -4,10 +4,11 @@
 
   app = angular.module('campbell', ['LocalStorageModule']);
 
-  app.directive('hallo', function() {
+  app.directive('hallo', function($timeout) {
     return {
       link: function(scope, element, attrs) {
         var $element, initial_html;
+        scope.$emit('register-element', element, scope.$eval(attrs.halloId));
         $element = $(element);
         initial_html = scope.$eval(attrs.halloText);
         element.html(initial_html.length > 0 ? initial_html : '&nbsp;');
@@ -26,13 +27,30 @@
             after_div_text = last_node.nodeType === 3 ? last_node.nodeValue : '';
             after = element.find('div').text() + after_div_text;
             element.html(before);
-            scope.$emit('hallosplit', element, scope.$eval(attrs.halloId), after);
+            scope.$emit('hallo-split', element, scope.$eval(attrs.halloId), after);
           }
-          scope.$emit('hallomodified', element);
+          scope.$emit('hallo-modified', element);
           escaped = content.replace('"', '\\"');
           scope.$eval(attrs.halloText + ' = "' + escaped + '"');
           return scope.$apply();
         });
+        scope.selectAll = function() {
+          return $timeout(function() {
+            var range, replacement, sel;
+            replacement = element[0];
+            if (window.getSelection && document.createRange) {
+              range = document.createRange();
+              range.selectNodeContents(replacement);
+              sel = window.getSelection();
+              sel.removeAllRanges();
+              return sel.addRange(range);
+            } else if (document.body.createTextRange) {
+              range = document.body.createTextRange();
+              range.moveToElementText(replacement);
+              return range.select();
+            }
+          }, 1);
+        };
         return $element.focus();
       }
     };
@@ -45,7 +63,7 @@
           return element.html(scope.$eval(attrs.ngModel));
         });
         return element.on('click', function() {
-          return scope.$emit('distilledinitialclick');
+          return scope.$emit('distilled-initial-click');
         });
       }
     };
@@ -57,24 +75,28 @@
         scope.height = function() {
           return $(element).height();
         };
-        scope.$on('hallomodified', function(evt, element) {
-          return $rootScope.$broadcast('distilledmodified', scope);
+        scope.$on('hallo-modified', function(evt, element) {
+          return $rootScope.$broadcast('distilled-modified', scope);
         });
         scope.$watch('block.replacements', function() {
-          return $rootScope.$broadcast('distilledmodified', scope);
+          return $rootScope.$broadcast('distilled-modified', scope);
         }, true);
-        scope.$on('distilledinitialclick', function() {
-          var $replacements, replacement;
+        scope.$on('distilled-initial-click', function() {
+          var $replacements, $selected, repl_element, replacement;
           $replacements = $(element).find('.replacements > p');
           if ($replacements.length) {
-            return $replacements.first().focus();
+            $selected = $replacements.first();
+            $selected.focus();
+            return angular.element($selected).scope().selectAll();
           } else {
-            replacement = scope.newReplacement();
+            replacement = scope.newReplacement(scope.block.text);
             scope.insertReplacementAfter(replacement, scope.block);
-            return scope.$apply();
+            scope.$apply();
+            repl_element = scope.getElementById(replacement.id);
+            return repl_element.scope().selectAll();
           }
         });
-        return $rootScope.$broadcast('distilledcreated', scope);
+        return $rootScope.$broadcast('distilled-created', scope);
       }
     };
   });
@@ -82,6 +104,7 @@
   app.controller('CampbellCtrl', function($scope) {
     var paragraph_counter;
     $scope.blocks = [];
+    $scope.nodes_by_id = {};
     paragraph_counter = 0;
     $scope.nextId = function() {
       return paragraph_counter++;
@@ -95,17 +118,16 @@
         text: text
       };
     };
-    $scope.newBlock = function(initial, replacements) {
-      var text;
-      if (initial == null) {
-        initial = '';
+    $scope.newBlock = function(text, replacements) {
+      if (text == null) {
+        text = '';
       }
       if (replacements == null) {
         replacements = [];
       }
       return {
         id: $scope.nextId(),
-        initial: initial,
+        text: text,
         replacements: (function() {
           var _i, _len, _results;
           _results = [];
@@ -119,6 +141,7 @@
     };
     $scope.insertBlockAfter = function(block, id) {
       var cur_block, i, _i, _len, _ref, _results;
+      $scope.nodes_by_id[block.id] = block;
       if (id != null) {
         _ref = $scope.blocks;
         _results = [];
@@ -155,6 +178,12 @@
         return block.replacements.push(replacement);
       }
     };
+    $scope.getElementById = function(id) {
+      return $scope.nodes_by_id[id];
+    };
+    $scope.$on('register-element', function(evt, element, id) {
+      return $scope.nodes_by_id[id] = element;
+    });
     return $scope.insertBlockAfter($scope.newBlock('Edit me', ['Edit me, too']));
   });
 
@@ -163,7 +192,7 @@
     $scope.getElementOfBlock = function(id) {
       return document.querySelector('#initial' + id);
     };
-    $scope.$on('hallosplit', function(evt, element, id, text) {
+    $scope.$on('hallo-split', function(evt, element, id, text) {
       var block;
       block = $scope.newBlock(text);
       return $scope.insertBlockAfter(block, id);
@@ -175,12 +204,12 @@
         return $paragraph.height(distilled.height());
       });
     };
-    $scope.$on('distilledmodified', matchDistilledHeight);
-    return $scope.$on('distilledcreated', matchDistilledHeight);
+    $scope.$on('distilled-modified', matchDistilledHeight);
+    return $scope.$on('distilled-created', matchDistilledHeight);
   });
 
   app.controller('ReplacementsCtrl', function($scope) {
-    return $scope.$on('hallosplit', function(evt, element, id, text) {
+    return $scope.$on('hallo-split', function(evt, element, id, text) {
       var replacement;
       replacement = $scope.newReplacement(text);
       return $scope.insertReplacementAfter(replacement, $scope.block, id);

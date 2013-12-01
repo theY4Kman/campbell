@@ -16,11 +16,11 @@
         <div class="clearfix"></div>
         <div id="editors">
             <div id="initial" ng-controller="InitialCtrl">
-                <p hallo ng-repeat="block in blocks" hallo-text="block.initial" hallo-id="block.id" id="initial{{ block.id }}"></p>
+                <p hallo ng-repeat="block in blocks" hallo-text="block.text" hallo-id="block.id" id="initial{{ block.id }}"></p>
             </div>
             <div id="distilled" ng-controller="DistilledCtrl">
                 <div distilled-block ng-repeat="block in blocks" class="block">
-                    <p distilled-initial class="initial" ng-model="block.initial"></p>
+                    <p distilled-initial class="initial" ng-model="block.text"></p>
                     <div class="replacements" ng-controller="ReplacementsCtrl">
                         <p class="replacement" hallo ng-repeat="replacement in block.replacements" hallo-text="replacement.text" hallo-id="replacement.id"></p>
                     </div>
